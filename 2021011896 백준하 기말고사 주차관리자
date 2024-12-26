@@ -1,0 +1,143 @@
+import java.io.*;
+import java.util.*;
+
+/**
+ * 주차장을 관리하는 시스템입니다. 차량 번호를 입력받아 빈 자리에 배치하고,
+ * 주차 상태를 파일로 저장하거나 불러올 수 있습니다.
+ * 
+ * @author YourName
+ * @version 1.0
+ * @since 2024-12-26
+ */
+public class ParkingManager {
+    private Map<String, String> parkingMap; // 현재 주차된 차량 정보
+    private Queue<String> vacantSpots; // 비어 있는 주차 자리 목록
+    private final String fileName = "parking_status.txt"; // 상태 저장 파일 이름
+
+    /**
+     * ParkingManager 클래스의 생성자입니다.
+     * 초기 주차 자리 목록을 받아 주차 관리 시스템을 초기화합니다.
+     * 
+     * @param initialVacantSpots 초기 비어 있는 주차 자리 목록
+     */
+    public ParkingManager(List<String> initialVacantSpots) {
+        this.parkingMap = new HashMap<>();
+        this.vacantSpots = new LinkedList<>(initialVacantSpots);
+        loadParkingStatusFromFile(); // 파일에서 상태 로드
+    }
+
+    /**
+     * 차량을 주차합니다. 빈 주차 자리가 없으면 null을 반환합니다.
+     * 
+     * @param carNumber 주차할 차량 번호
+     * @return 배정된 주차 자리, 빈 자리가 없으면 null
+     */
+    public String parkCar(String carNumber) {
+        if (vacantSpots.isEmpty()) {
+            return null; // 빈 자리가 없을 경우
+        }
+        String assignedSpot = vacantSpots.poll(); // 빈 자리에서 하나 꺼냄
+        parkingMap.put(assignedSpot, carNumber); // 자리와 차량번호 매핑
+        saveParkingStatusToFile(); // 파일에 상태 저장
+        return assignedSpot;
+    }
+
+    /**
+     * 현재 주차된 상태를 출력합니다. 주차된 차량 정보와 빈 자리를 표시합니다.
+     */
+    public void displayParkingStatus() {
+        System.out.println("Current Parking Status:");
+        for (Map.Entry<String, String> entry : parkingMap.entrySet()) {
+            System.out.println("Spot: " + entry.getKey() + " - Car: " + entry.getValue());
+        }
+        if (!vacantSpots.isEmpty()) {
+            System.out.println("Vacant Spots: " + vacantSpots);
+        } else {
+            System.out.println("No vacant spots available.");
+        }
+    }
+
+    /**
+     * 현재 비어 있는 주차 자리를 출력합니다.
+     */
+    public void checkVacantSpots() {
+        System.out.println("Vacant Spots: " + vacantSpots);
+    }
+
+    /**
+     * 주차 상태를 파일에 저장합니다.
+     * 주차된 차량 정보와 빈 자리를 각각 파일에 기록합니다.
+     */
+    private void saveParkingStatusToFile() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
+            // 주차된 차량 정보 저장
+            for (Map.Entry<String, String> entry : parkingMap.entrySet()) {
+                writer.println("PARKED:" + entry.getKey() + ":" + entry.getValue());
+            }
+            // 빈 자리 정보 저장
+            for (String spot : vacantSpots) {
+                writer.println("VACANT:" + spot);
+            }
+        } catch (IOException e) {
+            System.err.println("Error saving parking status: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 주차 상태를 파일에서 읽어옵니다.
+     * 파일이 존재하지 않을 경우 아무 작업도 하지 않습니다.
+     */
+    private void loadParkingStatusFromFile() {
+        File file = new File(fileName);
+        if (!file.exists()) {
+            return; // 파일이 없으면 초기 상태 그대로 유지
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("PARKED:")) {
+                    String[] parts = line.split(":");
+                    String spot = parts[1];
+                    String car = parts[2];
+                    parkingMap.put(spot, car);
+                } else if (line.startsWith("VACANT:")) {
+                    String[] parts = line.split(":");
+                    String spot = parts[1];
+                    vacantSpots.add(spot);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error loading parking status: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 프로그램 테스트를 위한 메인 메서드입니다.
+     * 초기 상태를 설정하고 차량을 주차하거나 빈 자리 확인, 주차 상태를 출력합니다.
+     * 
+     * @param args 프로그램 실행 시 전달되는 명령행 인자 (사용하지 않음)
+     */
+    public static void main(String[] args) {
+        // 초기 빈 자리 설정
+        List<String> initialVacantSpots = Arrays.asList("A1", "A2", "A3", "B1", "B2");
+
+        // 주차 관리 시스템 생성
+        ParkingManager parkingManager = new ParkingManager(initialVacantSpots);
+
+        // 차량 주차 및 상태 확인
+        System.out.println("Parking car ABC123...");
+        String spot1 = parkingManager.parkCar("ABC123");
+        System.out.println("Car parked at: " + spot1);
+
+        System.out.println("\nChecking vacant spots...");
+        parkingManager.checkVacantSpots();
+
+        System.out.println("\nParking car XYZ789...");
+        String spot2 = parkingManager.parkCar("XYZ789");
+        System.out.println("Car parked at: " + spot2);
+
+        System.out.println("\nDisplaying parking status...");
+        parkingManager.displayParkingStatus();
+    }
+}
